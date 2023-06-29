@@ -8,4 +8,4 @@ COPY dist $APP/dist
 
 WORKDIR $APP
 
-CMD ["./server"]
+CMD ["./server", "--addr", "0.0.0.0" ]
