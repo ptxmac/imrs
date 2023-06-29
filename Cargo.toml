@@ -3,4 +3,5 @@
 members = [
     "frontend",
     "server",
+    "imrs",
 ]
