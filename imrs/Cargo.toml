@@ -14,3 +14,4 @@ plotters = "0.3.5"
 regex = "1.8.4"
 reqwest = { version = "0.11.18", features = ["blocking"] }
 scraper = "0.17.1"
+thiserror = "1.0.40"
