@@ -1,25 +1,28 @@
+use std::collections::HashMap;
 use std::io::{BufWriter, Cursor};
 use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc};
 use axum::body::{Body, boxed};
-use axum::extract::Query;
+use axum::extract::{Query, State};
 use axum::http::{Response, StatusCode};
 use axum::response::{AppendHeaders, IntoResponse};
 use axum::{Json, Router};
 use axum::routing::get;
+use chrono::{DateTime, Utc};
 use clap::Parser;
 use image::{ImageBuffer, ImageFormat};
 use log::{error, info};
 use tower::{ServiceBuilder, ServiceExt};
 use tower_http::services::ServeDir;
-use tower_http::trace::TraceLayer;
+use tower_http::trace::{OnBodyChunk, TraceLayer};
 use tokio::fs;
 use imrs::{plot, tvshow};
 use plotters::prelude::*;
 use serde::{Deserialize, Serialize};
-use tower_http::follow_redirect::policy::PolicyExt;
+use tokio::sync::RwLock;
+use anyhow::{Result};
 
 
 #[derive(Parser, Debug)]
@@ -43,8 +46,7 @@ struct Hello {
     input: Option<String>,
 }
 
-async fn hello(query: Query<Hello>) -> impl IntoResponse {
-    let Query(query) = query;
+async fn hello(Query(query): Query<Hello>) -> impl IntoResponse {
     let who = query.input.unwrap_or("Test".to_string());
 
     format!("Hello, {}!", who)
@@ -55,11 +57,26 @@ struct TvShow {
     name: String,
 }
 
-async fn plot_tvshow(query: Query<TvShow>) -> impl IntoResponse {
-    let Query(query) = query;
+async fn plot_tvshow(Query(query): Query<TvShow>, State(state): State<SharedState>) -> impl IntoResponse {
     let name = query.name;
+
+    let ident = {
+        let mut state = state.write().await;
+        state.get_id_and_title(&name).await
+    }.unwrap();
+
+    let entry = {
+        let mut state = state.write().await;
+        match state.check(&ident) {
+            Some(entry) => entry,
+            None => {
+                state.update(&ident).await.unwrap()
+            }
+        }.clone()
+    };
+    info!("Entry {:?}", entry);
     // create plot
-    let results = tvshow::fetch_ratings(&name).await.unwrap();
+    let results = entry.ratings;
     // in memory plot
     let mut buffer = vec![0; 1200 * 400 * 3];
     let root = BitMapBackend::with_buffer(&mut buffer, (1200, 400)).into_drawing_area();
@@ -101,14 +118,28 @@ struct SlackMessage {
     attachments: Vec<SlackMessageAttachment>,
 }
 
-async fn slack(query: Query<Slack>) -> impl IntoResponse {
-    let Query(query) = query;
+async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> impl IntoResponse {
     info!("Slack request, {:?}", query);
+    info!(" state: {:?}", state);
 
     tokio::spawn(async move {
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        let ident = {
+            let mut state = state.write().await;
+            state.get_id_and_title(&query.text).await
+        }.unwrap();
+
+        info!("id: {:?}", ident);
+        {
+            let mut state = state.write().await;
+            let entry = match state.check(&ident) {
+                Some(entry) => entry,
+                None => {
+                    state.update(&ident).await.unwrap()
+                }
+            };
+        }
+
         info!("Slack response: {:?}", query);
-        // create plot
 
         // send to slack
         let m = SlackMessage {
@@ -116,9 +147,9 @@ async fn slack(query: Query<Slack>) -> impl IntoResponse {
             replace_original: true,
             attachments: vec![
                 SlackMessageAttachment {
-                    image_url: Some("https://www.rust-lang.org/logos/rust-logo-128x128.png".to_string()),
+                    image_url: Some(format!("https://imrs.t36.dk/api/image?name={}", query.text)),
                 }
-            ]
+            ],
         };
         let client = reqwest::Client::new();
         let resp = client.post(query.response_url)
@@ -137,9 +168,72 @@ async fn slack(query: Query<Slack>) -> impl IntoResponse {
 
 type SharedState = Arc<RwLock<AppState>>;
 
-#[derive(Default)]
-struct AppState {
+#[derive(Clone, Debug)]
+struct IdAndTitle {
+    id: String,
+    title: String,
+}
 
+#[derive(Debug,Clone)]
+struct Entry {
+    date: DateTime<Utc>,
+    title: String,
+    ratings: tvshow::Ratings,
+}
+
+#[derive(Default, Debug)]
+struct AppState {
+    // TODO: add name -> tt id mapping
+
+    entries: HashMap<String, Entry>,
+    names: HashMap<String, IdAndTitle>,
+}
+
+impl AppState {
+    fn check(&self, ident: &IdAndTitle) -> Option<&Entry> {
+        if let Some(entry) = self.entries.get(&ident.id) {
+            info!("Found entry: {:?}", entry);
+            let now = Utc::now();
+            let diff = now - entry.date;
+
+            info!("age: {}", diff.num_seconds());
+            if diff.num_hours() < 24 {
+                return Some(entry);
+            }
+        }
+
+        info!("check: {:?}", ident);
+        None
+    }
+
+    async fn update(&mut self, ident: &IdAndTitle) -> Result<&Entry> {
+        // TODO: should probably do the update using channels so we don't block while one is updating
+
+        let results = tvshow::fetch_ratings_ident(&ident.id, &ident.title).await?;
+
+        self.entries.insert(ident.id.to_string(), Entry {
+            date: Utc::now(),
+            title: ident.title.to_string(),
+            ratings: results,
+        });
+
+        Ok(self.entries.get(&ident.id).unwrap())
+    }
+
+    async fn get_id_and_title(&mut self, name: &str) -> Result<IdAndTitle> {
+        if let Some(ident) = self.names.get(name) {
+            return Ok(ident.clone());
+        }
+
+        let (id, title) = tvshow::fetch_id_and_title(name).await?;
+        let ident = IdAndTitle {
+            id,
+            title,
+        };
+        self.names.insert(name.to_string(), ident.clone());
+
+        Ok(ident)
+    }
 }
 
 #[tokio::main]
