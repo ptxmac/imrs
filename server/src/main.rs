@@ -6,17 +6,18 @@ use axum::body::{Body, boxed};
 use axum::extract::Query;
 use axum::http::{Response, StatusCode};
 use axum::response::{AppendHeaders, IntoResponse};
-use axum::Router;
+use axum::{Json, Router};
 use axum::routing::get;
 use clap::Parser;
 use image::{ImageBuffer, ImageFormat};
+use log::info;
 use tower::{ServiceBuilder, ServiceExt};
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 use tokio::fs;
 use imrs::{plot, tvshow};
 use plotters::prelude::*;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tower_http::follow_redirect::policy::PolicyExt;
 
 
@@ -75,6 +76,34 @@ async fn plot_tvshow(query: Query<TvShow>) -> impl IntoResponse {
     )
 }
 
+#[derive(Debug, Deserialize)]
+struct Slack {
+    text: String,
+    response_url: String,
+}
+
+#[derive(Serialize)]
+struct SlackResponse {
+    response_type: String,
+    text: String,
+}
+
+async fn slack(query: Query<Slack>) -> impl IntoResponse {
+    let Query(query) = query;
+    info!("Slack request, {:?}", query);
+
+    tokio::spawn(async move {
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        info!("Slack response: {:?}", query);
+
+
+    });
+
+    Json(SlackResponse {
+        response_type: "in_channel".to_string(),
+        text: "Hello ".to_string(),
+    })
+}
 
 #[tokio::main]
 async fn main() {
@@ -89,6 +118,7 @@ async fn main() {
     let app = Router::new()
         .route("/api/hello", get(hello))
         .route("/api/image", get(plot_tvshow))
+        .route("/api/slack", get(slack))
         .fallback_service(get(|req| async move {
             match ServeDir::new(&opt.static_dir).oneshot(req).await {
                 Ok(res) => {
