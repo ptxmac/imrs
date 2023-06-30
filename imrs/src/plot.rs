@@ -63,6 +63,7 @@ pub fn create_plot(title: &str, data: Data) -> Result<()> {
 
 
     chart.configure_series_labels()
+        .position(SeriesLabelPosition::LowerLeft)
         .background_style(&WHITE.mix(0.8))
         .border_style(&BLACK)
         .draw()?;

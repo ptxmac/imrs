@@ -113,6 +113,8 @@ pub fn fetch_ratings(name: &str) -> Result<Ratings> {
     let (id, title) = fetch_id_and_title(name)?;
     let seasons = fetch_seasons(&id)?;
 
+    info!("found {} seasons", seasons.len());
+
     let mut results = HashMap::new();
 
     for season in seasons {
