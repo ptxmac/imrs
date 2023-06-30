@@ -140,12 +140,13 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
         }
 
         // send to slack
+        let name = urlencoding::encode(&query.text);
         let m = SlackMessage {
             response_type: "in_channel".to_string(),
             replace_original: true,
             attachments: vec![
                 SlackMessageAttachment {
-                    image_url: Some(format!("https://imrs.t36.dk/api/image?name={}", query.text)),
+                    image_url: Some(format!("https://imrs.t36.dk/api/image?name={}", name)),
                 }
             ],
         };
