@@ -115,8 +115,12 @@ struct SlackMessageAttachment {
 struct SlackMessage {
     text: String,
     response_type: String,
-    delete_original: bool,
     attachments: Vec<SlackMessageAttachment>,
+}
+
+#[derive(Debug, Serialize)]
+struct SlackDelete {
+    delete_original: bool,
 }
 
 async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> impl IntoResponse {
@@ -145,9 +149,20 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
         info!("encoded: {}", name);
 
 
+        let client = reqwest::Client::new();
+
+        info!("delete slack message");
+        let resp = client.post(query.response_url)
+            .json(&SlackDelete {
+                delete_original: true,
+            })
+            .send().await;
+        if let Err(e) = resp {
+            error!("Slack error: {}", e);
+        }
+
         let m = SlackMessage {
             response_type: "in_channel".to_string(),
-            delete_original: true,
             text: ident.title,
             attachments: vec![
                 SlackMessageAttachment {
@@ -157,7 +172,6 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
         };
 
         info!("slack response: {:?}", m);
-        let client = reqwest::Client::new();
         let resp = client.post(query.response_url)
             .json(&m)
             .send().await;
