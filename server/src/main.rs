@@ -115,7 +115,7 @@ struct SlackMessageAttachment {
 struct SlackMessage {
     text: String,
     response_type: String,
-    replace_original: bool,
+    delete_original: bool,
     attachments: Vec<SlackMessageAttachment>,
 }
 
@@ -147,7 +147,7 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
 
         let m = SlackMessage {
             response_type: "in_channel".to_string(),
-            replace_original: true,
+            delete_original: true,
             text: ident.title,
             attachments: vec![
                 SlackMessageAttachment {
@@ -180,7 +180,7 @@ struct IdAndTitle {
     title: String,
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 struct Entry {
     date: DateTime<Utc>,
     title: String,
