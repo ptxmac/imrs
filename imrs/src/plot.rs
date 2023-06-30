@@ -1,7 +1,7 @@
-use std::collections::HashMap;
 use plotters::prelude::*;
+use std::collections::HashMap;
 
-use anyhow::{Result};
+use anyhow::Result;
 use log::info;
 use plotters::coord::Shift;
 
@@ -13,19 +13,27 @@ pub fn create_plot(title: &str, data: Data) -> Result<()> {
     create_plot_with_backend(root, title, data)
 }
 
-pub fn create_plot_with_backend(root: DrawingArea<BitMapBackend, Shift>, title: &str, data: Data) -> Result<()> {
+pub fn create_plot_with_backend(
+    root: DrawingArea<BitMapBackend, Shift>,
+    title: &str,
+    data: Data,
+) -> Result<()> {
     let total = data.iter().fold(0, |acc, v| acc + v.1.len());
     info!("total: {}", total);
 
     root.fill(&WHITE)?;
-    let root = root.titled(format!("IMDb Ratings for {}", title).as_str(), ("sans-serif", 24))?;
+    let root = root.titled(
+        format!("IMDb Ratings for {}", title).as_str(),
+        ("sans-serif", 24),
+    )?;
 
     let mut chart = ChartBuilder::on(&root)
         .margin(20)
         .x_label_area_size(40)
         .y_label_area_size(40)
         .build_cartesian_2d(0..total, -1.0f32..10.0f32)?;
-    chart.configure_mesh()
+    chart
+        .configure_mesh()
         .x_desc("Episode")
         .y_desc("Rating")
         .light_line_style(&WHITE)
@@ -49,25 +57,24 @@ pub fn create_plot_with_backend(root: DrawingArea<BitMapBackend, Shift>, title: 
         info!("season: {:?}", data);
 
         // Lines
-        chart.draw_series(LineSeries::new(
-            data.iter().map(|(x, y)| (*x, *y)),
-            color.stroke_width(2),
-        ))?
+        chart
+            .draw_series(LineSeries::new(
+                data.iter().map(|(x, y)| (*x, *y)),
+                color.stroke_width(2),
+            ))?
             .label(format!("Season {}", season))
             .legend(move |(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], color.filled()));
         // Dots
         chart.draw_series(
             data.iter()
-                .map(move |(x, y)|
-                    Circle::new((*x, *y), 2, dot_color)
-                ))?;
-
+                .map(move |(x, y)| Circle::new((*x, *y), 2, dot_color)),
+        )?;
 
         start += ratings.len();
     }
 
-
-    chart.configure_series_labels()
+    chart
+        .configure_series_labels()
         .position(SeriesLabelPosition::LowerLeft)
         .background_style(&WHITE.mix(0.8))
         .border_style(&BLACK)

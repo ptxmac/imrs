@@ -1,5 +1,3 @@
-
-
 // From https://gist.github.com/rhmoller/a054523c02cf3c4732fec6cdd26aab61
 
 use futures::task::{Context, Poll};
@@ -72,7 +70,8 @@ impl Future for ImageFuture {
                     let on_error_closure = Closure::wrap(Box::new(move || {
                         *failed_flag.borrow_mut() = true;
                         waker.wake_by_ref();
-                    }) as Box<dyn FnMut()>);
+                    })
+                        as Box<dyn FnMut()>);
                     image.set_onerror(Some(on_error_closure.as_ref().unchecked_ref()));
                     on_error_closure.forget();
 
