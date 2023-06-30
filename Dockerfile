@@ -1,6 +1,4 @@
-FROM debian:bookworm-slim
-
-RUN apt-get update && apt-get install -y libssl3 && rm -rf /var/lib/apt/lists/*
+FROM ubuntu:22.04
 
 ARG APP=/usr/src/app
 
