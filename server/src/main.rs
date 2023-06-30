@@ -136,7 +136,7 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
         info!("id: {:?}", ident);
         {
             let mut state = state.write().await;
-            let entry = match state.check(&ident) {
+            let _entry = match state.check(&ident) {
                 Some(entry) => entry,
                 None => {
                     state.update(&ident).await.unwrap()
@@ -197,7 +197,6 @@ struct IdAndTitle {
 #[derive(Debug, Clone)]
 struct Entry {
     date: DateTime<Utc>,
-    title: String,
     ratings: tvshow::Ratings,
 }
 
@@ -233,7 +232,6 @@ impl AppState {
 
         self.entries.insert(ident.id.to_string(), Entry {
             date: Utc::now(),
-            title: ident.title.to_string(),
             ratings: results,
         });
 
