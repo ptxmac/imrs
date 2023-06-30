@@ -4,6 +4,10 @@ A collection of IMDB tool written in rust.
 
 Heavily inspired by [noxern/graph](https://github.com/noxern/graph)
 
+## Code Quality
+
+Be warned, this is a playground for _learning_ rust. Expect tons of mistakes, and assume nothing is following conventions.
+
 ## Features
 
 - [x] Fetch star ratings for each episode of a TV Show
