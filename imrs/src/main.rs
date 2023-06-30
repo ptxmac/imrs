@@ -45,11 +45,14 @@ fn main() -> Result<()> {
 
 fn test() -> Result<()> {
     // test plot
-    let mut result:HashMap<String, Vec<f32>> = HashMap::new();
-    result.insert("1".to_string(), vec![1.0, 2.0, 3.0]);
-    result.insert("2".to_string(), vec![4.0, 5.0, 6.0]);
+    let mut result: HashMap<String, Vec<f32>> = HashMap::new();
+    result.insert("1".to_string(), vec![9.0, 8.6, 8.7, 8.2, 8.3, 9.3, 8.8]);
+    result.insert("2".to_string(), vec![8.6, 9.3, 8.3, 8.2, 8.3, 8.8, 8.6, 9.2, 9.1, 8.4, 8.9, 9.3, 9.2]);
+    result.insert("3".to_string(), vec![8.5, 8.6, 8.4, 8.2, 8.5, 9.3, 9.6, 8.7, 8.4, 7.9, 8.4, 9.5, 9.7]);
+    result.insert("4".to_string(), vec![9.2, 8.2, 8.0, 8.6, 8.6, 8.4, 8.8, 9.3, 8.8, 9.6, 9.7, 9.5, 9.9]);
+    result.insert("5".to_string(), vec![ 9.2, 8.8, 8.8, 8.8, 9.7, 9.0, 9.5, 9.6, 9.4, 9.2, 9.6, 9.1, 9.8, 10.0, 9.7, 9.9]);
 
-    plot::create_plot(result)?;
+    plot::create_plot("Breaking bad", result)?;
     Ok(())
 }
 
@@ -57,7 +60,7 @@ fn tv_show(name: &str) -> Result<()> {
     info!("Looking up ratings for {}", name);
 
     let results = tvshow::fetch_ratings(name)?;
-    plot::create_plot(results)?;
+    plot::create_plot( &results.name, results.ratings)?;
 
     Ok(())
 }
