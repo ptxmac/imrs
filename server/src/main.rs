@@ -152,7 +152,7 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
         let client = reqwest::Client::new();
 
         info!("delete slack message");
-        let resp = client.post(query.response_url)
+        let resp = client.post(&query.response_url)
             .json(&SlackDelete {
                 delete_original: true,
             })
@@ -172,7 +172,7 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
         };
 
         info!("slack response: {:?}", m);
-        let resp = client.post(query.response_url)
+        let resp = client.post(&query.response_url)
             .json(&m)
             .send().await;
         if let Err(e) = resp {
