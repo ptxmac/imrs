@@ -1,4 +1,5 @@
 use crate::api::image::plot_tvshow;
+use crate::api::names;
 use crate::api::slack::slack;
 use crate::opt::Opt;
 use crate::state::AppState;
