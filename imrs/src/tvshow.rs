@@ -4,6 +4,10 @@ use log::info;
 use regex::Regex;
 use tokio::task::JoinSet;
 
+/*
+TODO:
+- reqwest client reuse
+ */
 
 pub struct Ratings {
     pub name: String,

@@ -10,7 +10,7 @@ use axum::{Json, Router};
 use axum::routing::get;
 use clap::Parser;
 use image::{ImageBuffer, ImageFormat};
-use log::info;
+use log::{error, info};
 use tower::{ServiceBuilder, ServiceExt};
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
@@ -88,15 +88,31 @@ struct SlackResponse {
     text: String,
 }
 
+#[derive(Serialize)]
+struct SlackMessage {
+    response_type: String,
+}
+
 async fn slack(query: Query<Slack>) -> impl IntoResponse {
     let Query(query) = query;
     info!("Slack request, {:?}", query);
 
     tokio::spawn(async move {
-        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         info!("Slack response: {:?}", query);
+        // create plot
 
-
+        // send to slack
+        let m = SlackMessage {
+            response_type: "in_channel".to_string(),
+        };
+        let client = reqwest::Client::new();
+        let resp = client.post(query.response_url)
+            .json(&m)
+            .send().await;
+        if let Err(e) = resp {
+            error!("Slack error: {}", e);
+        }
     });
 
     Json(SlackResponse {
