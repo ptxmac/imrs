@@ -16,7 +16,7 @@ use image::{ImageBuffer, ImageFormat};
 use log::{error, info};
 use tower::{ServiceBuilder, ServiceExt};
 use tower_http::services::ServeDir;
-use tower_http::trace::{OnBodyChunk, TraceLayer};
+use tower_http::trace::TraceLayer;
 use tokio::fs;
 use imrs::{plot, tvshow};
 use plotters::prelude::*;
@@ -113,6 +113,7 @@ struct SlackMessageAttachment {
 
 #[derive(Debug, Serialize)]
 struct SlackMessage {
+    text: String,
     response_type: String,
     replace_original: bool,
     attachments: Vec<SlackMessageAttachment>,
@@ -147,6 +148,7 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
         let m = SlackMessage {
             response_type: "in_channel".to_string(),
             replace_original: true,
+            text: ident.title,
             attachments: vec![
                 SlackMessageAttachment {
                     image_url: Some(format!("https://imrs.t36.dk/api/image?name={}", name)),
@@ -166,7 +168,7 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
 
     Json(SlackResponse {
         response_type: "in_channel".to_string(),
-        text: "Hello ".to_string(),
+        text: "Loading... :loading:".to_string(),
     })
 }
 
