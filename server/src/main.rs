@@ -110,12 +110,12 @@ struct SlackResponse {
     text: String,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 struct SlackMessageAttachment {
     image_url: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 struct SlackMessage {
     response_type: String,
     replace_original: bool,
@@ -149,18 +149,22 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
             };
         }
 
-        info!("Slack response: {:?}", query);
-
         // send to slack
+        let name = urlencoding::encode(&query.text);
+        info!("encoded: {}", name);
+
+
         let m = SlackMessage {
             response_type: "in_channel".to_string(),
             replace_original: true,
             attachments: vec![
                 SlackMessageAttachment {
-                    image_url: Some(format!("{}/api/image?name={}", prefix, query.text)),
+                    image_url: Some(format!("{}/api/image?name={}", prefix, name)),
                 }
             ],
         };
+
+        info!("slack response: {:?}", m);
         let client = reqwest::Client::new();
         let resp = client.post(query.response_url)
             .json(&m)
