@@ -1,6 +1,6 @@
 FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y libssl3 libfontconfig1 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y libfontconfig1 && rm -rf /var/lib/apt/lists/*
 
 ARG APP=/usr/src/app
 
