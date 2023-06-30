@@ -2,7 +2,7 @@
 
 A collection of IMDB tool written in rust.
 
-Heavily inspired by noxern/graph
+Heavily inspired by [noxern/graph](https://github.com/noxern/graph)
 
 ## Features
 
