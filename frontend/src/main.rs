@@ -2,6 +2,14 @@ use yew::platform::spawn_local;
 use yew::prelude::*;
 use yew_router::prelude::*;
 use gloo_net::http::Request;
+use gloo::utils::document;
+use log::info;
+use crate::image_future::ImageFuture;
+
+mod text_input;
+mod image_future;
+
+use crate::text_input::TextInput;
 
 #[derive(Clone, Routable, PartialEq)]
 enum Route {
@@ -22,8 +30,9 @@ fn switch(routes: Route) -> Html {
 fn home() -> Html {
     html! {
         <div>
-            <h1>{ "Home" }</h1>
-            <Link<Route> to={Route::HelloServer} >{ "Hello Server!" }</Link<Route>>
+            <h1>{ "Rusty Graph" }</h1>
+            // <Link<Route> to={Route::HelloServer} >{ "Hello Server!" }</Link<Route>>
+            <Search />
         </div>
     }
 }
@@ -34,6 +43,88 @@ fn app() -> Html {
         <BrowserRouter>
             <Switch<Route> render={switch} />
         </BrowserRouter>
+    }
+}
+
+#[derive(Clone, PartialEq, Properties)]
+struct PlotProps {
+    name: String,
+}
+
+#[function_component(Plot)]
+fn plot(props: &PlotProps) -> Html {
+    let is_loaded = use_state(|| false);
+
+    let contents = use_state(|| {
+        let div: web_sys::Element = document().create_element("div").unwrap();
+        div.set_inner_html("Loading...");
+        let node: web_sys::Node = div.into();
+        Html::VRef(node)
+    });
+    {
+        let contents = contents.clone();
+        let is_loaded = is_loaded.clone();
+        use_effect_with_deps(
+            move |name| {
+                // show loader
+                let div: web_sys::Element = document().create_element("div").unwrap();
+                div.set_inner_html("Loading...");
+                let node: web_sys::Node = div.into();
+                contents.set(Html::VRef(node));
+
+
+                let name = name.clone();
+                info!("fetch image: {}", name);
+                spawn_local(async move {
+                    let name = urlencoding::encode(&name);
+                    let url = format!("/api/image?name={}", name);
+                    let image = ImageFuture::new(&url).await.unwrap();
+                    info!("done");
+                    let node: web_sys::Node = image.into();
+                    contents.set(Html::VRef(node));
+                    is_loaded.set(true);
+                });
+            },
+            props.name.clone(),
+        );
+    }
+
+    (*contents).clone()
+    // <img src={format!("/api/image?name={name}")} />
+}
+
+#[function_component(Search)]
+fn search() -> Html {
+    let search = use_state(|| "".to_string());
+    let name = use_state(|| -> Option<String> { None });
+
+    let on_change = {
+        let search = search.clone();
+        Callback::from(move |s| search.set(s))
+    };
+
+    let onsubmit = {
+        let search = search.clone();
+        let name = name.clone();
+        Callback::from(move |s: SubmitEvent| {
+            s.prevent_default();
+            info!("Submit: {}", *search);
+            name.set(Some((*search).clone()));
+        })
+    };
+
+    let name = (*name).clone();
+
+    html! {
+        <div>
+        { "Search: " }
+        <form method="post" {onsubmit}>
+        <TextInput value={(*search).clone()} on_change={on_change} />
+        </form>
+        if let Some(name) = name {
+            <Plot {name} />
+        }
+        </div>
     }
 }
 
@@ -55,7 +146,7 @@ fn hello_server() -> Html {
                         }
                     };
                     data.set(Some(result));
-                    log::info!("Got data");
+                    info!("Got data");
                 })
             }
 

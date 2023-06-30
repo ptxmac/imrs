@@ -3,15 +3,20 @@ use plotters::prelude::*;
 
 use anyhow::{anyhow, Result};
 use log::info;
+use plotters::coord::Shift;
 
 pub type Data = HashMap<String, Vec<f32>>;
 
 pub fn create_plot(title: &str, data: Data) -> Result<()> {
+    let root = BitMapBackend::new("test.png", (1200, 400)).into_drawing_area();
+
+    create_plot_with_backend(root, title, data)
+}
+
+pub fn create_plot_with_backend(root: DrawingArea<BitMapBackend, Shift>, title: &str, data: Data) -> Result<()> {
     let total = data.iter().fold(0, |acc, v| acc + v.1.len());
     info!("total: {}", total);
 
-
-    let root = BitMapBackend::new("test.png", (1200, 400)).into_drawing_area();
     root.fill(&WHITE)?;
     let root = root.titled(format!("IMDb Ratings for {}", title).as_str(), ("sans-serif", 24))?;
 
@@ -53,7 +58,7 @@ pub fn create_plot(title: &str, data: Data) -> Result<()> {
         // Dots
         chart.draw_series(
             data.iter()
-                .map( move |(x, y)|
+                .map(move |(x, y)|
                     Circle::new((*x, *y), 2, dot_color)
                 ))?;
 

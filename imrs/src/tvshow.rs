@@ -1,9 +1,8 @@
 use std::collections::HashMap;
-use std::fmt;
-use std::fmt::Display;
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use log::info;
 use regex::Regex;
+use tokio::task::JoinSet;
 
 
 pub struct Ratings {
@@ -21,10 +20,10 @@ pub enum Error {
     NotFound(String),
 }
 
-fn fetch_id_and_title(name: &str) -> Result<(String, String)> {
+async fn fetch_id_and_title(name: &str) -> Result<(String, String)> {
     let url = format!("https://www.imdb.com/find?q={}&s=tt&ttype=tv", name);
-    let response = reqwest::blocking::get(url)?;
-    let text = response.text()?;
+    let response = reqwest::get(url).await?;
+    let text = response.text().await?;
 
     let document = scraper::Html::parse_document(&text);
 
@@ -47,11 +46,11 @@ fn fetch_id_and_title(name: &str) -> Result<(String, String)> {
     Ok((tt_id.to_string(), title))
 }
 
-fn fetch_seasons(tt_id: &str) -> Result<Vec<String>> {
+async fn fetch_seasons(tt_id: &str) -> Result<Vec<String>> {
     // Get seasons
     let url = format!("https://www.imdb.com/title/{}/episodes/_ajax", tt_id);
-    let response = reqwest::blocking::get(url)?;
-    let text = response.text()?;
+    let response = reqwest::get(url).await?;
+    let text = response.text().await?;
     let season_selector = scraper::Selector::parse("#bySeason option").unwrap();
     let document = scraper::Html::parse_document(&text);
     let seasons = document.select(&season_selector);
@@ -65,15 +64,15 @@ fn fetch_seasons(tt_id: &str) -> Result<Vec<String>> {
     return Ok(res);
 }
 
-fn fetch_season_ratings(tt_id: &str, season: &str) -> Result<Vec<f32>> {
+async fn fetch_season_ratings(tt_id: &str, season: &str) -> Result<Vec<f32>> {
     info!("Fetch ratings for season {}", season);
 
     let mut season_ratings = Vec::new();
 
     // Get rating
     let url = format!("https://www.imdb.com/title/{}/episodes/_ajax?season={}", tt_id, season);
-    let response = reqwest::blocking::get(url)?;
-    let text = response.text()?;
+    let response = reqwest::get(url).await?;
+    let text = response.text().await?;
     let document = scraper::Html::parse_document(&text);
     let rows_selector = scraper::Selector::parse(".info").unwrap();
     let rows = document.select(&rows_selector);
@@ -109,16 +108,26 @@ fn fetch_season_ratings(tt_id: &str, season: &str) -> Result<Vec<f32>> {
     Ok(season_ratings)
 }
 
-pub fn fetch_ratings(name: &str) -> Result<Ratings> {
-    let (id, title) = fetch_id_and_title(name)?;
-    let seasons = fetch_seasons(&id)?;
+pub async fn fetch_ratings(name: &str) -> Result<Ratings> {
+    let (id, title) = fetch_id_and_title(name).await?;
+    let seasons = fetch_seasons(&id).await?;
 
     info!("found {} seasons", seasons.len());
 
     let mut results = HashMap::new();
 
+    let mut set = JoinSet::new();
+
     for season in seasons {
-        let season_ratings = fetch_season_ratings(&id, &season)?;
+        let id = id.clone();
+        set.spawn(async move {
+            let season_ratings = fetch_season_ratings(&id, &season).await;
+            (season, season_ratings)
+        });
+    }
+    while let Some(r) = set.join_next().await {
+        let (season, season_ratings_result) = r?;
+        let season_ratings = season_ratings_result?;
         results.insert(season, season_ratings);
     }
 
@@ -126,4 +135,18 @@ pub fn fetch_ratings(name: &str) -> Result<Ratings> {
         name: title,
         ratings: results,
     })
+}
+
+pub fn test_ratings() -> Ratings {
+    let mut result: HashMap<String, Vec<f32>> = HashMap::new();
+    result.insert("1".to_string(), vec![9.0, 8.6, 8.7, 8.2, 8.3, 9.3, 8.8]);
+    result.insert("2".to_string(), vec![8.6, 9.3, 8.3, 8.2, 8.3, 8.8, 8.6, 9.2, 9.1, 8.4, 8.9, 9.3, 9.2]);
+    result.insert("3".to_string(), vec![8.5, 8.6, 8.4, 8.2, 8.5, 9.3, 9.6, 8.7, 8.4, 7.9, 8.4, 9.5, 9.7]);
+    result.insert("4".to_string(), vec![9.2, 8.2, 8.0, 8.6, 8.6, 8.4, 8.8, 9.3, 8.8, 9.6, 9.7, 9.5, 9.9]);
+    result.insert("5".to_string(), vec![9.2, 8.8, 8.8, 8.8, 9.7, 9.0, 9.5, 9.6, 9.4, 9.2, 9.6, 9.1, 9.8, 10.0, 9.7, 9.9]);
+
+    Ratings {
+        name: "Breaking Bad".to_string(),
+        ratings: result,
+    }
 }
