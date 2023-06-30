@@ -1,7 +1,7 @@
+use anyhow::Result;
 use clap::{Parser, Subcommand};
-use log::info;
-use anyhow::{Result};
 use imrs::{plot, tvshow};
+use log::info;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -19,9 +19,7 @@ enum Commands {
     Test {},
 
     /// Look up ratings for a TV show
-    TV {
-        name: String,
-    },
+    TV { name: String },
 }
 
 #[tokio::main]
@@ -37,7 +35,7 @@ async fn main() -> Result<()> {
     use Commands::*;
     match &cli.command {
         Test {} => test(),
-        TV { name, } => tv_show(name).await
+        TV { name } => tv_show(name).await,
     }
 }
 

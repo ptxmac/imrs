@@ -1,29 +1,28 @@
+use anyhow::Result;
+use axum::body::{boxed, Body};
+use axum::extract::{Query, State};
+use axum::http::{Response, StatusCode};
+use axum::response::{AppendHeaders, IntoResponse};
+use axum::routing::get;
+use axum::{Json, Router};
+use chrono::{DateTime, Utc};
+use clap::Parser;
+use image::{ImageBuffer, ImageFormat};
+use imrs::{plot, tvshow};
+use log::{error, info};
+use plotters::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{BufWriter, Cursor};
 use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::sync::{Arc};
-use axum::body::{Body, boxed};
-use axum::extract::{Query, State};
-use axum::http::{Response, StatusCode};
-use axum::response::{AppendHeaders, IntoResponse};
-use axum::{Json, Router};
-use axum::routing::get;
-use chrono::{DateTime, Utc};
-use clap::Parser;
-use image::{ImageBuffer, ImageFormat};
-use log::{error, info};
+use std::sync::Arc;
+use tokio::fs;
+use tokio::sync::RwLock;
 use tower::{ServiceBuilder, ServiceExt};
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
-use tokio::fs;
-use imrs::{plot, tvshow};
-use plotters::prelude::*;
-use serde::{Deserialize, Serialize};
-use tokio::sync::RwLock;
-use anyhow::{Result};
-
 
 #[derive(Parser, Debug, Clone)]
 #[clap(name = "server", about = "Backend server")]
@@ -61,22 +60,25 @@ struct TvShow {
     name: String,
 }
 
-async fn plot_tvshow(Query(query): Query<TvShow>, State(state): State<SharedState>) -> impl IntoResponse {
+async fn plot_tvshow(
+    Query(query): Query<TvShow>,
+    State(state): State<SharedState>,
+) -> impl IntoResponse {
     let name = query.name;
 
     let ident = {
         let mut state = state.write().await;
         state.get_id_and_title(&name).await
-    }.unwrap();
+    }
+    .unwrap();
 
     let entry = {
         let mut state = state.write().await;
         match state.check(&ident) {
             Some(entry) => entry,
-            None => {
-                state.update(&ident).await.unwrap()
-            }
-        }.clone()
+            None => state.update(&ident).await.unwrap(),
+        }
+        .clone()
     };
     info!("Entry {:?}", entry);
     // create plot
@@ -86,16 +88,16 @@ async fn plot_tvshow(Query(query): Query<TvShow>, State(state): State<SharedStat
     let root = BitMapBackend::with_buffer(&mut buffer, (1200, 400)).into_drawing_area();
     plot::create_plot_with_backend(root, &results.name, results.ratings).unwrap();
     // create image
-    let image_buffer: ImageBuffer<image::Rgb<u8>, Vec<u8>> = ImageBuffer::from_vec(1200, 400, buffer).unwrap();
+    let image_buffer: ImageBuffer<image::Rgb<u8>, Vec<u8>> =
+        ImageBuffer::from_vec(1200, 400, buffer).unwrap();
 
     // convert to png
     let mut buffer = BufWriter::new(Cursor::new(Vec::new()));
-    image_buffer.write_to(&mut buffer, ImageFormat::Png).unwrap();
+    image_buffer
+        .write_to(&mut buffer, ImageFormat::Png)
+        .unwrap();
     let bytes = buffer.into_inner().unwrap().into_inner();
-    (
-        AppendHeaders([("Content-Type", "image/png")]),
-        bytes
-    )
+    (AppendHeaders([("Content-Type", "image/png")]), bytes)
 }
 
 #[derive(Debug, Deserialize)]
@@ -136,16 +138,15 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
         let ident = {
             let mut state = state.write().await;
             state.get_id_and_title(&query.text).await
-        }.unwrap();
+        }
+        .unwrap();
 
         info!("id: {:?}", ident);
         {
             let mut state = state.write().await;
             let _entry = match state.check(&ident) {
                 Some(entry) => entry,
-                None => {
-                    state.update(&ident).await.unwrap()
-                }
+                None => state.update(&ident).await.unwrap(),
             };
         }
 
@@ -153,23 +154,18 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
         let name = urlencoding::encode(&query.text);
         info!("encoded: {}", name);
 
-
         let client = reqwest::Client::new();
 
         let m = SlackMessage {
             response_type: "in_channel".to_string(),
             text: ident.title,
-            attachments: vec![
-                SlackMessageAttachment {
-                    image_url: Some(format!("{}/api/image?name={}", prefix, name)),
-                }
-            ],
+            attachments: vec![SlackMessageAttachment {
+                image_url: Some(format!("{}/api/image?name={}", prefix, name)),
+            }],
         };
 
         info!("slack response: {:?}", m);
-        let resp = client.post(&query.response_url)
-            .json(&m)
-            .send().await;
+        let resp = client.post(&query.response_url).json(&m).send().await;
         if let Err(e) = resp {
             error!("Slack error: {}", e);
         }
@@ -224,10 +220,13 @@ impl AppState {
 
         let results = tvshow::fetch_ratings_ident(&ident.id, &ident.title).await?;
 
-        self.entries.insert(ident.id.to_string(), Entry {
-            date: Utc::now(),
-            ratings: results,
-        });
+        self.entries.insert(
+            ident.id.to_string(),
+            Entry {
+                date: Utc::now(),
+                ratings: results,
+            },
+        );
 
         Ok(self.entries.get(&ident.id).unwrap())
     }
@@ -238,10 +237,7 @@ impl AppState {
         }
 
         let (id, title) = tvshow::fetch_id_and_title(name).await?;
-        let ident = IdAndTitle {
-            id,
-            title,
-        };
+        let ident = IdAndTitle { id, title };
         self.names.insert(name.to_string(), ident.clone());
 
         Ok(ident)
@@ -263,7 +259,6 @@ async fn main() {
         names: HashMap::new(),
         opt: opt.clone(),
     }));
-
 
     let app = Router::new()
         .route("/api/hello", get(hello))
@@ -291,7 +286,7 @@ async fn main() {
                                 .body(boxed(Body::from(index_content)))
                                 .unwrap()
                         }
-                        _ => res.map(boxed)
+                        _ => res.map(boxed),
                     }
                 }
                 Err(err) => Response::builder()

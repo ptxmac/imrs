@@ -1,13 +1,13 @@
+use crate::image_future::ImageFuture;
+use gloo::utils::document;
+use gloo_net::http::Request;
+use log::info;
 use yew::platform::spawn_local;
 use yew::prelude::*;
 use yew_router::prelude::*;
-use gloo_net::http::Request;
-use gloo::utils::document;
-use log::info;
-use crate::image_future::ImageFuture;
 
-mod text_input;
 mod image_future;
+mod text_input;
 
 use crate::text_input::TextInput;
 
@@ -72,7 +72,6 @@ fn plot(props: &PlotProps) -> Html {
                 let node: web_sys::Node = div.into();
                 contents.set(Html::VRef(node));
 
-
                 let name = name.clone();
                 info!("fetch image: {}", name);
                 spawn_local(async move {
@@ -127,7 +126,6 @@ fn search() -> Html {
         </div>
     }
 }
-
 
 #[function_component(HelloServer)]
 fn hello_server() -> Html {

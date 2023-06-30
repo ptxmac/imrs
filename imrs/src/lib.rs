@@ -1,3 +1,2 @@
-
-pub mod tvshow;
 pub mod plot;
+pub mod tvshow;
