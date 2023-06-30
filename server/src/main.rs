@@ -141,6 +141,9 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
 
         // send to slack
         let name = urlencoding::encode(&query.text);
+        info!("encoded: {}", name);
+
+
         let m = SlackMessage {
             response_type: "in_channel".to_string(),
             replace_original: true,
