@@ -2,6 +2,7 @@ use std::io::{BufWriter, Cursor};
 use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::{Arc, RwLock};
 use axum::body::{Body, boxed};
 use axum::extract::Query;
 use axum::http::{Response, StatusCode};
@@ -134,6 +135,13 @@ async fn slack(query: Query<Slack>) -> impl IntoResponse {
     })
 }
 
+type SharedState = Arc<RwLock<AppState>>;
+
+#[derive(Default)]
+struct AppState {
+
+}
+
 #[tokio::main]
 async fn main() {
     let opt = Opt::parse();
@@ -144,10 +152,13 @@ async fn main() {
 
     tracing_subscriber::fmt::init();
 
+    let shared_state = SharedState::default();
+
     let app = Router::new()
         .route("/api/hello", get(hello))
         .route("/api/image", get(plot_tvshow))
         .route("/api/slack", get(slack))
+        .with_state(Arc::clone(&shared_state))
         .fallback_service(get(|req| async move {
             match ServeDir::new(&opt.static_dir).oneshot(req).await {
                 Ok(res) => {
@@ -185,7 +196,7 @@ async fn main() {
         opt.port,
     ));
 
-    log::info!("Listening on http://{}", sock_addr);
+    info!("Listening on http://{}", sock_addr);
 
     axum::Server::bind(&sock_addr)
         .serve(app.into_make_service())
