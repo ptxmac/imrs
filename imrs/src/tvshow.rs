@@ -4,7 +4,12 @@ use log::info;
 use regex::Regex;
 use tokio::task::JoinSet;
 
+/*
+TODO:
+- reqwest client reuse
+ */
 
+#[derive(Debug, Clone)]
 pub struct Ratings {
     pub name: String,
     pub ratings: HashMap<String, Vec<f32>>,
@@ -20,7 +25,7 @@ pub enum Error {
     NotFound(String),
 }
 
-async fn fetch_id_and_title(name: &str) -> Result<(String, String)> {
+pub async fn fetch_id_and_title(name: &str) -> Result<(String, String)> {
     let url = format!("https://www.imdb.com/find?q={}&s=tt&ttype=tv", name);
     let response = reqwest::get(url).await?;
     let text = response.text().await?;
@@ -110,6 +115,10 @@ async fn fetch_season_ratings(tt_id: &str, season: &str) -> Result<Vec<f32>> {
 
 pub async fn fetch_ratings(name: &str) -> Result<Ratings> {
     let (id, title) = fetch_id_and_title(name).await?;
+    fetch_ratings_ident(&id, &title).await
+}
+
+pub async fn fetch_ratings_ident(id: & str, title: &str) -> Result<Ratings> {
     let seasons = fetch_seasons(&id).await?;
 
     info!("found {} seasons", seasons.len());
@@ -118,8 +127,9 @@ pub async fn fetch_ratings(name: &str) -> Result<Ratings> {
 
     let mut set = JoinSet::new();
 
+
     for season in seasons {
-        let id = id.clone();
+        let id = id.to_string();
         set.spawn(async move {
             let season_ratings = fetch_season_ratings(&id, &season).await;
             (season, season_ratings)
@@ -132,7 +142,7 @@ pub async fn fetch_ratings(name: &str) -> Result<Ratings> {
     }
 
     Ok(Ratings {
-        name: title,
+        name: title.to_string(),
         ratings: results,
     })
 }
