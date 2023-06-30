@@ -1,4 +1,5 @@
 use crate::api::image::plot_tvshow;
+use crate::api::names;
 use crate::api::slack::slack;
 use crate::opt::Opt;
 use crate::state::AppState;
@@ -59,6 +60,7 @@ async fn main() {
         .route("/api/hello", get(hello))
         .route("/api/image", get(plot_tvshow))
         .route("/api/slack", get(slack))
+        .route("/api/names", get(names))
         .with_state(Arc::clone(&shared_state))
         .fallback_service(get(|req| async move {
             match ServeDir::new(&opt.static_dir).oneshot(req).await {
