@@ -89,8 +89,15 @@ struct SlackResponse {
 }
 
 #[derive(Serialize)]
+struct SlackMessageAttachment {
+    image_url: Option<String>,
+}
+
+#[derive(Serialize)]
 struct SlackMessage {
     response_type: String,
+    replace_original: bool,
+    attachments: Vec<SlackMessageAttachment>,
 }
 
 async fn slack(query: Query<Slack>) -> impl IntoResponse {
@@ -105,6 +112,12 @@ async fn slack(query: Query<Slack>) -> impl IntoResponse {
         // send to slack
         let m = SlackMessage {
             response_type: "in_channel".to_string(),
+            replace_original: true,
+            attachments: vec![
+                SlackMessageAttachment {
+                    image_url: Some("https://www.rust-lang.org/logos/rust-logo-128x128.png".to_string()),
+                }
+            ]
         };
         let client = reqwest::Client::new();
         let resp = client.post(query.response_url)
