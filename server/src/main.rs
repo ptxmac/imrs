@@ -117,6 +117,7 @@ struct SlackMessageAttachment {
 
 #[derive(Debug, Serialize)]
 struct SlackMessage {
+    text: String,
     response_type: String,
     replace_original: bool,
     attachments: Vec<SlackMessageAttachment>,
@@ -157,6 +158,7 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
         let m = SlackMessage {
             response_type: "in_channel".to_string(),
             replace_original: true,
+            text: ident.title,
             attachments: vec![
                 SlackMessageAttachment {
                     image_url: Some(format!("{}/api/image?name={}", prefix, name)),
@@ -176,7 +178,7 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
 
     Json(SlackResponse {
         response_type: "in_channel".to_string(),
-        text: "Hello ".to_string(),
+        text: "Loading... :loading:".to_string(),
     })
 }
 
