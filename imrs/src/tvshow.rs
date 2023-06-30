@@ -6,7 +6,11 @@ use log::info;
 use regex::Regex;
 
 
-pub type Ratings = HashMap<String, Vec<f32>>;
+pub struct Ratings {
+    pub name: String,
+    pub ratings: HashMap<String, Vec<f32>>,
+}
+
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -116,5 +120,8 @@ pub fn fetch_ratings(name: &str) -> Result<Ratings> {
         results.insert(season, season_ratings);
     }
 
-    Ok(results)
+    Ok(Ratings {
+        name: title,
+        ratings: results,
+    })
 }
