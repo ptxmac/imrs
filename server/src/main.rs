@@ -59,6 +59,7 @@ async fn main() {
         .route("/api/hello", get(hello))
         .route("/api/image", get(plot_tvshow))
         .route("/api/slack", get(slack))
+        .route("/api/names", get(names))
         .with_state(Arc::clone(&shared_state))
         .fallback_service(get(|req| async move {
             match ServeDir::new(&opt.static_dir).oneshot(req).await {
