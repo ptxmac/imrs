@@ -119,7 +119,6 @@ struct SlackMessageAttachment {
 struct SlackMessage {
     text: String,
     response_type: String,
-    replace_original: bool,
     attachments: Vec<SlackMessageAttachment>,
 }
 
@@ -142,7 +141,7 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
         info!("id: {:?}", ident);
         {
             let mut state = state.write().await;
-            let entry = match state.check(&ident) {
+            let _entry = match state.check(&ident) {
                 Some(entry) => entry,
                 None => {
                     state.update(&ident).await.unwrap()
@@ -155,9 +154,10 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
         info!("encoded: {}", name);
 
 
+        let client = reqwest::Client::new();
+
         let m = SlackMessage {
             response_type: "in_channel".to_string(),
-            replace_original: true,
             text: ident.title,
             attachments: vec![
                 SlackMessageAttachment {
@@ -167,8 +167,7 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
         };
 
         info!("slack response: {:?}", m);
-        let client = reqwest::Client::new();
-        let resp = client.post(query.response_url)
+        let resp = client.post(&query.response_url)
             .json(&m)
             .send().await;
         if let Err(e) = resp {
@@ -178,7 +177,7 @@ async fn slack(Query(query): Query<Slack>, State(state): State<SharedState>) -> 
 
     Json(SlackResponse {
         response_type: "in_channel".to_string(),
-        text: "Loading... :loading:".to_string(),
+        text: "Loading...".to_string(),
     })
 }
 
@@ -193,7 +192,6 @@ struct IdAndTitle {
 #[derive(Debug, Clone)]
 struct Entry {
     date: DateTime<Utc>,
-    title: String,
     ratings: tvshow::Ratings,
 }
 
@@ -228,7 +226,6 @@ impl AppState {
 
         self.entries.insert(ident.id.to_string(), Entry {
             date: Utc::now(),
-            title: ident.title.to_string(),
             ratings: results,
         });
 
