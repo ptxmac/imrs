@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use plotters::prelude::*;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result};
 use log::info;
 use plotters::coord::Shift;
 
