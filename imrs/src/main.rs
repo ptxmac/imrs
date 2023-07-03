@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
 
 fn test() -> Result<()> {
     let results = tvshow::test_ratings();
-    plot::create_plot(&results.name, results.ratings)?;
+    plot::create_plot_svg(&results.name, results.ratings)?;
     Ok(())
 }
 

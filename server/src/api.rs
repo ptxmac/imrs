@@ -32,7 +32,7 @@ impl Drop for Thing {
 }
 
 pub async fn hello(Query(query): Query<Hello>) -> impl IntoResponse {
-    let t = Thing {};
+    let _t = Thing {};
     let who = query.input.unwrap_or("Test".to_string());
     info!("start");
     sleep(Duration::from_secs(2)).await;

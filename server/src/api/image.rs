@@ -38,8 +38,11 @@ pub async fn plot_tvshow(
     let results = entry.ratings;
     // in memory plot
     let mut buffer = vec![0; 1200 * 400 * 3];
-    let root = BitMapBackend::with_buffer(&mut buffer, (1200, 400)).into_drawing_area();
-    plot::create_plot_with_backend(root, &results.name, results.ratings).unwrap();
+    {
+        let root = BitMapBackend::with_buffer(&mut buffer, (1200, 400)).into_drawing_area();
+        plot::create_plot_with_backend(&root, &results.name, results.ratings).unwrap();
+    }
+
     // create image
     let image_buffer: ImageBuffer<image::Rgb<u8>, Vec<u8>> =
         ImageBuffer::from_vec(1200, 400, buffer).unwrap();
