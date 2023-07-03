@@ -28,15 +28,17 @@ pub fn create_plot_with_backend(
     )?;
 
     let mut chart = ChartBuilder::on(&root)
-        .margin(20)
+        .margin(40)
         .x_label_area_size(40)
         .y_label_area_size(40)
         .build_cartesian_2d(0..total, -1.0f32..10.0f32)?;
+
     chart
         .configure_mesh()
         .x_desc("Episode")
         .y_desc("Rating")
         .light_line_style(&WHITE)
+        .disable_x_mesh()
         .draw()?;
 
     let mut start: usize = 1;
@@ -73,12 +75,12 @@ pub fn create_plot_with_backend(
         start += ratings.len();
     }
 
-    chart
-        .configure_series_labels()
-        .position(SeriesLabelPosition::LowerLeft)
-        .background_style(&WHITE.mix(0.8))
-        .border_style(&BLACK)
-        .draw()?;
+    // chart
+    //     .configure_series_labels()
+    //     .position(SeriesLabelPosition::LowerLeft)
+    //     .background_style(&WHITE.mix(0.8))
+    //     .border_style(&BLACK)
+    //     .draw()?;
 
     root.present()?;
 
