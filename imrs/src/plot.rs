@@ -22,22 +22,38 @@ pub fn create_plot_with_backend(
     info!("total: {}", total);
 
     root.fill(&WHITE)?;
-    let root = root.titled(
-        format!("IMDb Ratings for {}", title).as_str(),
-        ("sans-serif", 24),
-    )?;
+    // let root = root.titled(
+    //     format!("IMDb Ratings for {}", title).as_str(),
+    //     ("sans-serif", 24),
+    // )?;
+    {
+        let title = format!("IMDb Ratings for {}", title);
+        let title_x = root.relative_to_width(0.5) as i32;
+        let title_style = ("sans-serif", 24).into_text_style(&root);
+        let (size_x, _size_y) = root.estimate_text_size(&title, &title_style)?;
 
+        let title_x = title_x - (size_x / 2) as i32;
+        let title_y = 20;
+
+        root.draw_text(&title, &title_style, (title_x, title_y))?;
+    }
     let mut chart = ChartBuilder::on(&root)
-        .margin(40)
+        .margin(30)
+        .margin_top(60)
         .x_label_area_size(40)
         .y_label_area_size(40)
-        .build_cartesian_2d(0..total, -1.0f32..10.0f32)?;
+        .build_cartesian_2d(
+            (0..total + 1).with_key_points(vec![1, total]),
+            -1.0f32..10.0f32,
+        )?;
 
     chart
         .configure_mesh()
         .x_desc("Episode")
         .y_desc("Rating")
         .light_line_style(&WHITE)
+        //.x_max_light_lines(400)
+        //.x_labels(300)
         .disable_x_mesh()
         .draw()?;
 
