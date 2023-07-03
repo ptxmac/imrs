@@ -10,18 +10,26 @@ pub type Data = HashMap<String, Vec<f32>>;
 pub fn create_plot(title: &str, data: Data) -> Result<()> {
     let root = BitMapBackend::new("test.png", (1200, 400)).into_drawing_area();
 
-    create_plot_with_backend(root, title, data)
+    create_plot_with_backend(&root, title, data)?;
+    Ok(())
 }
 
-pub fn create_plot_with_backend(
-    root: DrawingArea<BitMapBackend, Shift>,
+pub fn create_plot_svg(title: &str, data: Data) -> Result<()> {
+    let root = SVGBackend::new("test.svg", (1200, 400)).into_drawing_area();
+    create_plot_with_backend(&root, title, data)?;
+    Ok(())
+}
+
+pub fn create_plot_with_backend<DB: DrawingBackend>(
+    root: &DrawingArea<DB, Shift>,
     title: &str,
     data: Data,
-) -> Result<()> {
+) -> DrawResult<(), DB> {
     let total = data.iter().fold(0, |acc, v| acc + v.1.len());
     info!("total: {}", total);
 
     root.fill(&WHITE)?;
+
     // let root = root.titled(
     //     format!("IMDb Ratings for {}", title).as_str(),
     //     ("sans-serif", 24),
@@ -29,7 +37,7 @@ pub fn create_plot_with_backend(
     {
         let title = format!("IMDb Ratings for {}", title);
         let title_x = root.relative_to_width(0.5) as i32;
-        let title_style = ("sans-serif", 24).into_text_style(&root);
+        let title_style = ("sans-serif", 24).into_text_style(root);
         let (size_x, _size_y) = root.estimate_text_size(&title, &title_style)?;
 
         let title_x = title_x - (size_x / 2) as i32;
@@ -98,7 +106,7 @@ pub fn create_plot_with_backend(
     //     .border_style(&BLACK)
     //     .draw()?;
 
-    root.present()?;
+    //root.present()?;
 
     Ok(())
 }
