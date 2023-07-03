@@ -1,17 +1,14 @@
 use crate::api::image::plot_tvshow;
-use crate::api::names;
 use crate::api::slack::slack;
+use crate::api::{hello, names};
 use crate::opt::Opt;
 use crate::state::AppState;
 use axum::body::{boxed, Body};
-use axum::extract::Query;
 use axum::http::{Response, StatusCode};
-use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::Router;
 use clap::Parser;
 use log::info;
-use serde::Deserialize;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 use std::path::PathBuf;
@@ -26,17 +23,6 @@ use tower_http::trace::TraceLayer;
 mod api;
 mod opt;
 mod state;
-
-#[derive(Deserialize)]
-struct Hello {
-    input: Option<String>,
-}
-
-async fn hello(Query(query): Query<Hello>) -> impl IntoResponse {
-    let who = query.input.unwrap_or("Test".to_string());
-
-    format!("Hello, {}!", who)
-}
 
 type SharedState = Arc<RwLock<AppState>>;
 
