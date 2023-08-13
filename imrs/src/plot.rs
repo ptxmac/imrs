@@ -2,8 +2,8 @@ use plotters::prelude::*;
 use std::collections::HashMap;
 
 use anyhow::Result;
-use log::info;
 use plotters::coord::Shift;
+use tracing::info;
 
 pub type Data = HashMap<String, Vec<f32>>;
 

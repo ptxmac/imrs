@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
 use imrs::{plot, tvshow};
-use log::info;
+use tracing::info;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
 
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", format!("{}", cli.log_level));
-    }
+    };
 
     env_logger::init();
 

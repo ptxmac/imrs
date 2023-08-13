@@ -8,7 +8,6 @@ use axum::http::{Response, StatusCode};
 use axum::routing::get;
 use axum::Router;
 use clap::Parser;
-use log::info;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv6Addr, SocketAddr};
 use std::path::PathBuf;
@@ -19,6 +18,7 @@ use tokio::sync::RwLock;
 use tower::{ServiceBuilder, ServiceExt};
 use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
+use tracing::info;
 
 mod api;
 mod opt;
@@ -34,7 +34,7 @@ async fn main() {
         std::env::set_var("RUST_LOG", format!("{},hyper=info,mio=info", opt.log_level));
     }
 
-    tracing_subscriber::fmt::init();
+    console_subscriber::init();
 
     let shared_state = Arc::new(RwLock::new(AppState {
         entries: HashMap::new(),

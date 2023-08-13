@@ -2,8 +2,8 @@ use crate::SharedState;
 use axum::extract::{Query, State};
 use axum::response::IntoResponse;
 use axum::Json;
-use log::{error, info};
 use serde::{Deserialize, Serialize};
+use tracing::{error, info};
 
 #[derive(Debug, Deserialize)]
 pub struct Slack {

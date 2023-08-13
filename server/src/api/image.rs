@@ -3,10 +3,10 @@ use axum::extract::{Query, State};
 use axum::response::{AppendHeaders, IntoResponse};
 use image::{ImageBuffer, ImageFormat};
 use imrs::plot;
-use log::info;
 use plotters::prelude::*;
 use serde::Deserialize;
 use std::io::{BufWriter, Cursor};
+use tracing::info;
 
 #[derive(Deserialize)]
 pub struct TvShow {

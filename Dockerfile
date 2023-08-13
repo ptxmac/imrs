@@ -11,4 +11,6 @@ COPY dist $APP/dist
 
 WORKDIR $APP
 
+ENV RUST_LOG=info
+
 CMD ["./server", "--addr", "0.0.0.0" ]

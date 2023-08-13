@@ -2,8 +2,8 @@ use crate::opt::Opt;
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use imrs::tvshow;
-use log::info;
 use std::collections::HashMap;
+use tracing::info;
 
 #[derive(Clone, Debug)]
 pub struct IdAndTitle {

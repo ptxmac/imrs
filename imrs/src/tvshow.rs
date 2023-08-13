@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Result};
-use log::info;
 use regex::Regex;
 use std::collections::HashMap;
 use tokio::task::JoinSet;
+use tracing::info;
 
 /*
 TODO:
