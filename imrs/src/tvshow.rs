@@ -48,27 +48,30 @@ pub async fn fetch_id_and_title(name: &str) -> Result<(String, String)> {
     let tt_id = cap.get(1).ok_or(anyhow!("no match"))?.as_str();
 
     let title = candidate.inner_html();
-
+    info!("tt_id: {}, title: {}", tt_id, title);
     Ok((tt_id.to_string(), title))
 }
 
 async fn fetch_seasons(tt_id: &str) -> Result<Vec<String>> {
     // Get seasons
-    let url = format!("https://www.imdb.com/title/{}/episodes/_ajax", tt_id);
+    let url = format!("https://www.imdb.com/title/{}/episodes/", tt_id);
     let response = reqwest::get(url).await?;
     let text = response.text().await?;
-    let season_selector = scraper::Selector::parse("#bySeason option").unwrap();
+    let season_selector = scraper::Selector::parse("[data-testid=\"tab-season-entry\"]").unwrap();
     let document = scraper::Html::parse_document(&text);
     let seasons = document.select(&season_selector);
 
     let mut res = Vec::new();
 
     for season in seasons {
-        let season = season
-            .value()
-            .attr("value")
-            .ok_or(anyhow!("no value for season"))?;
-        res.push(season.to_string());
+        let val = season.text().collect::<Vec<_>>().join("");
+        res.push(val);
+        // info!("{:?}", val);
+        // let season = season
+        //     .value()
+        //     .attr("value")
+        //     .ok_or(anyhow!("no value for season"))?;
+        // res.push(season.to_string());
     }
     return Ok(res);
 }
@@ -80,47 +83,27 @@ async fn fetch_season_ratings(tt_id: &str, season: &str) -> Result<Vec<f32>> {
 
     // Get rating
     let url = format!(
-        "https://www.imdb.com/title/{}/episodes/_ajax?season={}",
+        "https://www.imdb.com/title/{}/episodes/?season={}",
         tt_id, season
     );
     let response = reqwest::get(url).await?;
     let text = response.text().await?;
     let document = scraper::Html::parse_document(&text);
-    let rows_selector = scraper::Selector::parse(".info").unwrap();
-    let rows = document.select(&rows_selector);
 
-    for row in rows {
-        let ep_number_selector = scraper::Selector::parse("[itemprop=\"episodeNumber\"]").unwrap();
-        let ep_number = row
-            .select(&ep_number_selector)
-            .next()
-            .ok_or(anyhow!("no ep number"))?;
-        let ep_number = ep_number
-            .value()
-            .attr("content")
-            .ok_or(anyhow!("no ep number"))?;
+    let rating_group_container_selector =
+        scraper::Selector::parse("[data-testid=\"ratingGroup--container\"]").unwrap();
 
-        let rating_widget_selector = scraper::Selector::parse(".ipl-rating-widget").unwrap();
-        let rating_star_placeholder_selector =
-            scraper::Selector::parse(".ipl-rating-star--placeholder").unwrap();
-        let rating_star_selector = scraper::Selector::parse(".ipl-rating-star__rating").unwrap();
-        // TODO: check missing
-        if row.select(&rating_widget_selector).next() == None {
-            // Not aired yet
-            //season_ratings.push(-1.0);
-            continue;
-        }
-        if row.select(&rating_star_placeholder_selector).next() != None {
-            info!("no rating for {}", ep_number);
-            season_ratings.push(-1.0);
-            continue;
-        }
-
-        let ep_rating = row
-            .select(&rating_star_selector)
-            .next()
-            .ok_or(anyhow!("no rating"))?;
-        let ep_rating = ep_rating.inner_html();
+    let rating_group_containers = document.select(&rating_group_container_selector);
+    for (_idx, row) in rating_group_containers.enumerate() {
+        let span_ch = row.first_child().unwrap();
+        // TODO: handle missing ratings
+        let rating = span_ch
+            .first_child()
+            .unwrap()
+            .next_sibling()
+            .unwrap()
+            .value();
+        let ep_rating: &str = rating.as_text().unwrap();
         let ep_rating: f32 = ep_rating.parse()?;
 
         season_ratings.push(ep_rating);
