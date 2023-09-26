@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use regex::Regex;
+use scraper::Node;
 use std::collections::HashMap;
 use tokio::task::JoinSet;
 use tracing::info;
@@ -66,12 +67,6 @@ async fn fetch_seasons(tt_id: &str) -> Result<Vec<String>> {
     for season in seasons {
         let val = season.text().collect::<Vec<_>>().join("");
         res.push(val);
-        // info!("{:?}", val);
-        // let season = season
-        //     .value()
-        //     .attr("value")
-        //     .ok_or(anyhow!("no value for season"))?;
-        // res.push(season.to_string());
     }
     return Ok(res);
 }
@@ -95,18 +90,32 @@ async fn fetch_season_ratings(tt_id: &str, season: &str) -> Result<Vec<f32>> {
 
     let rating_group_containers = document.select(&rating_group_container_selector);
     for (_idx, row) in rating_group_containers.enumerate() {
-        let span_ch = row.first_child().unwrap();
-        // TODO: handle missing ratings
-        let rating = span_ch
-            .first_child()
-            .unwrap()
-            .next_sibling()
-            .unwrap()
-            .value();
-        let ep_rating: &str = rating.as_text().unwrap();
-        let ep_rating: f32 = ep_rating.parse()?;
+        match row.first_child() {
+            None => {
+                info!("No ratings");
+                season_ratings.push(-1.0);
+                continue;
+            }
+            Some(span_ch) => {
+                let rating = span_ch
+                    .first_child()
+                    .unwrap()
+                    .next_sibling()
+                    .unwrap()
+                    .value();
+                let ep_rating: &str = rating.as_text().unwrap();
+                let ep_rating: f32 = ep_rating.parse()?;
 
-        season_ratings.push(ep_rating);
+                season_ratings.push(ep_rating);
+            }
+        }
+    }
+    // remove -1.0 suffix
+    if let Some(idx) = season_ratings.iter().position(|&r| r == -1.0) {
+        let suffix = season_ratings[idx..].to_vec();
+        if suffix.iter().all(|&r| r == -1.0) {
+            season_ratings.truncate(idx);
+        }
     }
 
     Ok(season_ratings)
