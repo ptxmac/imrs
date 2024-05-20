@@ -27,7 +27,8 @@ pub enum Error {
 
 pub async fn fetch_id_and_title(name: &str) -> Result<(String, String)> {
     let url = format!("https://www.imdb.com/find?q={}&s=tt&ttype=tv", name);
-    let response = reqwest::get(url).await?;
+    let client = reqwest::Client::new();
+    let response = client.get(&url).header("Accept-Language", "en").send().await?;
     let text = response.text().await?;
 
     let document = scraper::Html::parse_document(&text);
